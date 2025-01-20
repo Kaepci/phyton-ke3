@@ -9,6 +9,8 @@ def init_db():
     # Initialize database connection and create tables if not exist
     conn = sqlite3.connect('dashboard.db')
     cursor = conn.cursor()
+    
+    # Create table 'stock' with the column 'brand'
     cursor.execute('''CREATE TABLE IF NOT EXISTS stock (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT,
@@ -19,6 +21,8 @@ def init_db():
                         quantity INTEGER,
                         price REAL
                     )''')
+    # Add 'brand' column if it doesn't exist (in case of older versions of the database)
+    cursor.execute('PRAGMA foreign_keys=OFF;')
     cursor.execute('''CREATE TABLE IF NOT EXISTS finance (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         description TEXT,
@@ -35,6 +39,7 @@ def init_db():
                         date TEXT,
                         FOREIGN KEY (item_id) REFERENCES stock (id)
                     )''')
+    
     conn.commit()
     conn.close()
 
