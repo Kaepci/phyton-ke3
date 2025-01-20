@@ -59,6 +59,22 @@ def show_stock():
             conn.commit()
             st.success("Stock added successfully!")
 
+    st.subheader("Update or Delete Stock")
+    stock_id = st.number_input("Stock ID", min_value=1, step=1)
+    new_quantity = st.number_input("New Quantity", min_value=0, step=1)
+    update_btn = st.button("Update Stock")
+    delete_btn = st.button("Delete Stock")
+
+    if update_btn:
+        cursor.execute('UPDATE stock SET quantity = ? WHERE id = ?', (new_quantity, stock_id))
+        conn.commit()
+        st.success("Stock updated successfully!")
+
+    if delete_btn:
+        cursor.execute('DELETE FROM stock WHERE id = ?', (stock_id,))
+        conn.commit()
+        st.success("Stock deleted successfully!")
+
     cursor.execute('SELECT * FROM stock')
     items = cursor.fetchall()
     st.table(items)
@@ -84,6 +100,22 @@ def show_finance():
             cursor.execute('INSERT INTO finance (description, amount, type, date) VALUES (?, ?, ?, ?)', (description, amount, type, date))
             conn.commit()
             st.success("Finance record added successfully!")
+
+    st.subheader("Update or Delete Finance Record")
+    record_id = st.number_input("Record ID", min_value=1, step=1)
+    new_amount = st.number_input("New Amount", format="%.2f")
+    update_btn = st.button("Update Finance Record")
+    delete_btn = st.button("Delete Finance Record")
+
+    if update_btn:
+        cursor.execute('UPDATE finance SET amount = ? WHERE id = ?', (new_amount, record_id))
+        conn.commit()
+        st.success("Finance record updated successfully!")
+
+    if delete_btn:
+        cursor.execute('DELETE FROM finance WHERE id = ?', (record_id,))
+        conn.commit()
+        st.success("Finance record deleted successfully!")
 
     cursor.execute('SELECT * FROM finance')
     records = cursor.fetchall()
@@ -117,6 +149,36 @@ def show_sales():
                 st.success("Sale recorded successfully!")
             else:
                 st.error("Item not found")
+
+    st.subheader("Update or Delete Sale Record")
+    sale_id = st.number_input("Sale ID", min_value=1, step=1)
+    new_quantity = st.number_input("New Quantity for Sale", min_value=0, step=1)
+    update_btn = st.button("Update Sale Record")
+    delete_btn = st.button("Delete Sale Record")
+
+    if update_btn:
+        cursor.execute('SELECT item_id, quantity FROM sales WHERE id = ?', (sale_id,))
+        sale_record = cursor.fetchone()
+        if sale_record:
+            item_id, old_quantity = sale_record
+            cursor.execute('UPDATE sales SET quantity = ?, total_price = ? * quantity WHERE id = ?', (new_quantity, old_quantity, sale_id))
+            cursor.execute('UPDATE stock SET quantity = quantity + ? - ? WHERE id = ?', (old_quantity, new_quantity, item_id))
+            conn.commit()
+            st.success("Sale record updated successfully!")
+        else:
+            st.error("Sale record not found")
+
+    if delete_btn:
+        cursor.execute('SELECT item_id, quantity FROM sales WHERE id = ?', (sale_id,))
+        sale_record = cursor.fetchone()
+        if sale_record:
+            item_id, quantity = sale_record
+            cursor.execute('DELETE FROM sales WHERE id = ?', (sale_id,))
+            cursor.execute('UPDATE stock SET quantity = quantity + ? WHERE id = ?', (quantity, item_id))
+            conn.commit()
+            st.success("Sale record deleted successfully!")
+        else:
+            st.error("Sale record not found")
 
     cursor.execute('SELECT * FROM sales')
     records = cursor.fetchall()
