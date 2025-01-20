@@ -10,7 +10,16 @@ def init_db():
     conn = sqlite3.connect('dashboard.db')
     cursor = conn.cursor()
     
-    # Create table 'stock' with the column 'brand'
+    # Check if the column 'brand' exists, if not, add it
+    cursor.execute('PRAGMA foreign_keys=OFF;')  # Disable foreign key checks
+    try:
+        cursor.execute('''ALTER TABLE stock ADD COLUMN brand TEXT;''')
+    except sqlite3.OperationalError:
+        # If column already exists, skip adding it
+        pass
+    cursor.execute('PRAGMA foreign_keys=ON;')  # Re-enable foreign key checks
+
+    # Create tables if they don't exist
     cursor.execute('''CREATE TABLE IF NOT EXISTS stock (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT,
@@ -21,8 +30,6 @@ def init_db():
                         quantity INTEGER,
                         price REAL
                     )''')
-    # Add 'brand' column if it doesn't exist (in case of older versions of the database)
-    cursor.execute('PRAGMA foreign_keys=OFF;')
     cursor.execute('''CREATE TABLE IF NOT EXISTS finance (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         description TEXT,
@@ -107,13 +114,11 @@ def show_stock():
     conn = sqlite3.connect('dashboard.db')
     cursor = conn.cursor()
 
-    # Upload CSV for Stock
     uploaded_file = st.file_uploader("Upload Stock CSV", type="csv")
     if uploaded_file:
         upload_csv_to_table(uploaded_file, 'stock')
         st.success("Stock data uploaded successfully!")
 
-    # Add new stock
     with st.form("add_stock"):
         name = st.text_input("Item Name")
         brand = st.text_input("Brand")
@@ -129,17 +134,6 @@ def show_stock():
             conn.commit()
             st.success("Stock added successfully!")
 
-    # Display all stock items in a table
-    st.subheader("All Stock Items")
-    cursor.execute('SELECT * FROM stock')
-    items = cursor.fetchall()
-    if items:
-        stock_df = pd.DataFrame(items, columns=['ID', 'Name', 'Brand', 'Type', 'Color', 'Size', 'Quantity', 'Price'])
-        st.table(stock_df)
-    else:
-        st.write("No stock items available.")
-
-    # Update or Delete Stock
     st.subheader("Update or Delete Stock")
     stock_id = st.number_input("Stock ID", min_value=1, step=1)
     new_quantity = st.number_input("New Quantity", min_value=0, step=1)
@@ -156,6 +150,9 @@ def show_stock():
         conn.commit()
         st.success("Stock deleted successfully!")
 
+    cursor.execute('SELECT * FROM stock')
+    items = cursor.fetchall()
+    st.table(items)
     conn.close()
 
 def show_finance():
