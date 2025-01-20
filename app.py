@@ -1,6 +1,7 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def init_db():
     # Initialize database connection and create tables if not exist
@@ -37,6 +38,48 @@ def upload_csv_to_table(file, table_name):
     df = pd.read_csv(file)
     df.to_sql(table_name, conn, if_exists='append', index=False)
     conn.commit()
+    conn.close()
+
+def show_dashboard():
+    st.header("Dashboard Overview")
+    conn = sqlite3.connect('dashboard.db')
+
+    # Finance Overview
+    st.subheader("Finance Summary")
+    finance_df = pd.read_sql_query("SELECT * FROM finance", conn)
+    if not finance_df.empty:
+        income = finance_df[finance_df['type'] == 'Income']['amount'].sum()
+        expense = finance_df[finance_df['type'] == 'Expense']['amount'].sum()
+        net_profit = income - expense
+
+        st.write(f"**Total Income:** ${income:.2f}")
+        st.write(f"**Total Expense:** ${expense:.2f}")
+        st.write(f"**Net Profit:** ${net_profit:.2f}")
+
+        fig, ax = plt.subplots()
+        ax.pie([income, expense], labels=['Income', 'Expense'], autopct='%1.1f%%', startangle=90, colors=['green', 'red'])
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        st.pyplot(fig)
+    else:
+        st.write("No finance data available.")
+
+    # Stock Overview
+    st.subheader("Stock Summary")
+    stock_df = pd.read_sql_query("SELECT * FROM stock", conn)
+    if not stock_df.empty:
+        st.bar_chart(stock_df.set_index('name')['quantity'])
+    else:
+        st.write("No stock data available.")
+
+    # Sales Overview
+    st.subheader("Sales Summary")
+    sales_df = pd.read_sql_query("SELECT * FROM sales", conn)
+    if not sales_df.empty:
+        sales_by_date = sales_df.groupby('date')['total_price'].sum()
+        st.line_chart(sales_by_date)
+    else:
+        st.write("No sales data available.")
+
     conn.close()
 
 def show_stock():
@@ -189,10 +232,12 @@ def main():
     st.title("Business Dashboard")
     init_db()
 
-    menu = ["Stock", "Finance", "Sales"]
+    menu = ["Dashboard", "Stock", "Finance", "Sales"]
     choice = st.sidebar.selectbox("Menu", menu)
 
-    if choice == "Stock":
+    if choice == "Dashboard":
+        show_dashboard()
+    elif choice == "Stock":
         show_stock()
     elif choice == "Finance":
         show_finance()
