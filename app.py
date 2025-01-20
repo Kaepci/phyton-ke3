@@ -1,280 +1,132 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import plotly.express as px
+import random
 
-def init_db():
-    # Initialize database connection and create tables if not exist
-    conn = sqlite3.connect('dashboard.db')
-    cursor = conn.cursor()
+# Data dummy untuk masing-masing modul
+# Modul Sales
+sales_data = pd.DataFrame({
+    'Bulan': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+    'Pendapatan': [random.randint(5000, 10000) for _ in range(5)]
+})
+
+# Modul Stock Barang (Menambahkan ID, Nama, Jenis, Warna, Ukuran, Jumlah, Harga)
+stock_data = pd.DataFrame({
+    'ID': [1, 2, 3, 4],
+    'Nama': ['Produk A', 'Produk B', 'Produk C', 'Produk D'],
+    'Jenis': ['Elektronik', 'Pakaian', 'Makanan', 'Peralatan'],
+    'Warna': ['Merah', 'Biru', 'Hijau', 'Hitam'],
+    'Ukuran': ['M', 'L', 'XL', 'S'],
+    'Jumlah': [random.randint(20, 100) for _ in range(4)],
+    'Harga': [random.randint(100, 500) for _ in range(4)]
+})
+
+# Modul Finansial
+financial_data = pd.DataFrame({
+    'Kategori': ['Pendapatan', 'Pengeluaran'],
+    'Jumlah': [random.randint(5000, 15000), random.randint(1000, 5000)]
+})
+
+# Modul HR
+hr_data = pd.DataFrame({
+    'Posisi': ['Manager', 'Staff', 'Supervisor'],
+    'Jumlah Karyawan': [2, 10, 3]
+})
+
+# Fungsi untuk membuat grafik
+def create_sales_fig():
+    return px.bar(sales_data, x='Bulan', y='Pendapatan', title='Sales Pendapatan')
+
+def create_stock_fig():
+    return px.pie(stock_data, names='Nama', values='Jumlah', title='Distribusi Stok Barang')
+
+def create_financial_fig():
+    return px.pie(financial_data, names='Kategori', values='Jumlah', title='Pemasukan dan Pengeluaran')
+
+def create_hr_fig():
+    return px.bar(hr_data, x='Posisi', y='Jumlah Karyawan', title='Jumlah Karyawan Berdasarkan Posisi')
+
+# Layout untuk Dashboard Streamlit
+st.title("Dashboard Perusahaan")
+
+# Bagian Sales
+st.subheader('Sales Pendapatan')
+st.plotly_chart(create_sales_fig())
+
+# Input untuk update Sales
+st.text_input('Bulan', key='sales_bulan')
+st.number_input('Pendapatan', key='sales_pendapatan', min_value=0)
+
+if st.button('Update Sales'):
+    bulan = st.session_state.sales_bulan
+    pendapatan = st.session_state.sales_pendapatan
+    if bulan and pendapatan:
+        sales_data = sales_data.append({'Bulan': bulan, 'Pendapatan': int(pendapatan)}, ignore_index=True)
+        st.success('Data Sales berhasil diperbarui!')
+    st.plotly_chart(create_sales_fig())
+
+# Bagian Stock Barang
+st.subheader('Stock Barang')
+st.plotly_chart(create_stock_fig())
+
+# Input untuk update Stock Barang
+st.number_input('ID Barang', key='stock_id', min_value=1)
+st.text_input('Nama Barang', key='stock_nama')
+st.text_input('Jenis Barang', key='stock_jenis')
+st.text_input('Warna Barang', key='stock_warna')
+st.text_input('Ukuran Barang', key='stock_ukuran')
+st.number_input('Jumlah Barang', key='stock_jumlah', min_value=1)
+st.number_input('Harga Barang', key='stock_harga', min_value=0)
+
+if st.button('Update Stock'):
+    id_barang = st.session_state.stock_id
+    nama = st.session_state.stock_nama
+    jenis = st.session_state.stock_jenis
+    warna = st.session_state.stock_warna
+    ukuran = st.session_state.stock_ukuran
+    jumlah = st.session_state.stock_jumlah
+    harga = st.session_state.stock_harga
     
-    # Check if the column 'brand' exists, if not, add it
-    cursor.execute('PRAGMA foreign_keys=OFF;')  # Disable foreign key checks
-    try:
-        cursor.execute('''ALTER TABLE stock ADD COLUMN brand TEXT;''')
-    except sqlite3.OperationalError:
-        # If column already exists, skip adding it
-        pass
-    cursor.execute('PRAGMA foreign_keys=ON;')  # Re-enable foreign key checks
+    if id_barang and nama and jenis and warna and ukuran and jumlah and harga:
+        new_row = {
+            'ID': int(id_barang),
+            'Nama': nama,
+            'Jenis': jenis,
+            'Warna': warna,
+            'Ukuran': ukuran,
+            'Jumlah': int(jumlah),
+            'Harga': int(harga)
+        }
+        stock_data = stock_data.append(new_row, ignore_index=True)
+        st.success('Data Stock Barang berhasil diperbarui!')
+    st.plotly_chart(create_stock_fig())
 
-    # Create tables if they don't exist
-    cursor.execute('''CREATE TABLE IF NOT EXISTS stock (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT,
-                        brand TEXT,
-                        type TEXT,
-                        color TEXT,
-                        size TEXT,
-                        quantity INTEGER,
-                        price REAL
-                    )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS finance (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        description TEXT,
-                        amount REAL,
-                        type TEXT,  -- income or expense
-                        date TEXT
-                    )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS sales (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        customer_name TEXT,
-                        item_id INTEGER,
-                        quantity INTEGER,
-                        total_price REAL,
-                        date TEXT,
-                        FOREIGN KEY (item_id) REFERENCES stock (id)
-                    )''')
-    
-    conn.commit()
-    conn.close()
+# Bagian Finansial
+st.subheader('Pemasukan dan Pengeluaran')
+st.plotly_chart(create_financial_fig())
 
-def upload_csv_to_table(file, table_name):
-    conn = sqlite3.connect('dashboard.db')
-    cursor = conn.cursor()
-    df = pd.read_csv(file)
-    df.to_sql(table_name, conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()
+# Input untuk update Finansial
+st.text_input('Kategori (Pendapatan/Pengeluaran)', key='financial_kategori')
+st.number_input('Jumlah', key='financial_jumlah', min_value=0)
 
-def show_dashboard():
-    st.header("Dashboard Overview")
-    conn = sqlite3.connect('dashboard.db')
+if st.button('Update Finansial'):
+    kategori = st.session_state.financial_kategori
+    jumlah = st.session_state.financial_jumlah
+    if kategori and jumlah:
+        financial_data = financial_data.append({'Kategori': kategori, 'Jumlah': int(jumlah)}, ignore_index=True)
+        st.success('Data Finansial berhasil diperbarui!')
+    st.plotly_chart(create_financial_fig())
 
-    # Finance Overview
-    st.subheader("Finance Summary")
-    finance_df = pd.read_sql_query("SELECT * FROM finance", conn)
-    if not finance_df.empty:
-        income = finance_df[finance_df['type'] == 'Income']['amount'].sum()
-        expense = finance_df[finance_df['type'] == 'Expense']['amount'].sum()
-        net_profit = income - expense
+# Bagian HR
+st.subheader('Jumlah Karyawan Berdasarkan Posisi')
+st.plotly_chart(create_hr_fig())
 
-        st.write(f"**Total Income:** ${income:.2f}")
-        st.write(f"**Total Expense:** ${expense:.2f}")
-        st.write(f"**Net Profit:** ${net_profit:.2f}")
+# Input untuk update HR
+posisi = st.selectbox('Pilih Posisi', hr_data['Posisi'])
+jumlah_karyawan = st.number_input('Jumlah Karyawan', key='hr_jumlah', min_value=0)
 
-        if income > 0 or expense > 0:
-            fig, ax = plt.subplots()
-            ax.pie(
-                [max(income, 0), max(expense, 0)],
-                labels=['Income', 'Expense'],
-                autopct='%1.1f%%',
-                startangle=90,
-                colors=['green', 'red']
-            )
-            ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-            st.pyplot(fig)
-        else:
-            st.write("No sufficient data for the pie chart.")
-    else:
-        st.write("No finance data available.")
-
-    # Stock Overview
-    st.subheader("Stock Summary")
-    stock_df = pd.read_sql_query("SELECT * FROM stock", conn)
-    if not stock_df.empty:
-        st.bar_chart(stock_df.set_index('name')['quantity'])
-    else:
-        st.write("No stock data available.")
-
-    # Sales Overview
-    st.subheader("Sales Summary")
-    sales_df = pd.read_sql_query("SELECT * FROM sales", conn)
-    if not sales_df.empty:
-        sales_by_date = sales_df.groupby('date')['total_price'].sum()
-        st.line_chart(sales_by_date)
-    else:
-        st.write("No sales data available.")
-
-    conn.close()
-
-def show_stock():
-    st.header("Stock Management")
-    conn = sqlite3.connect('dashboard.db')
-    cursor = conn.cursor()
-
-    uploaded_file = st.file_uploader("Upload Stock CSV", type="csv")
-    if uploaded_file:
-        upload_csv_to_table(uploaded_file, 'stock')
-        st.success("Stock data uploaded successfully!")
-
-    with st.form("add_stock"):
-        name = st.text_input("Item Name")
-        brand = st.text_input("Brand")
-        type = st.text_input("Type")
-        color = st.text_input("Color")
-        size = st.text_input("Size")
-        quantity = st.number_input("Quantity", min_value=0)
-        price = st.number_input("Price", min_value=0.0, format="%.2f")
-        submitted = st.form_submit_button("Add Stock")
-        if submitted:
-            cursor.execute('INSERT INTO stock (name, brand, type, color, size, quantity, price) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                           (name, brand, type, color, size, quantity, price))
-            conn.commit()
-            st.success("Stock added successfully!")
-
-    st.subheader("Update or Delete Stock")
-    stock_id = st.number_input("Stock ID", min_value=1, step=1)
-    new_quantity = st.number_input("New Quantity", min_value=0, step=1)
-    update_btn = st.button("Update Stock")
-    delete_btn = st.button("Delete Stock")
-
-    if update_btn:
-        cursor.execute('UPDATE stock SET quantity = ? WHERE id = ?', (new_quantity, stock_id))
-        conn.commit()
-        st.success("Stock updated successfully!")
-
-    if delete_btn:
-        cursor.execute('DELETE FROM stock WHERE id = ?', (stock_id,))
-        conn.commit()
-        st.success("Stock deleted successfully!")
-
-    cursor.execute('SELECT * FROM stock')
-    items = cursor.fetchall()
-    st.table(items)
-    conn.close()
-
-def show_finance():
-    st.header("Finance Management")
-    conn = sqlite3.connect('dashboard.db')
-    cursor = conn.cursor()
-
-    uploaded_file = st.file_uploader("Upload Finance CSV", type="csv")
-    if uploaded_file:
-        upload_csv_to_table(uploaded_file, 'finance')
-        st.success("Finance data uploaded successfully!")
-
-    with st.form("add_finance"):
-        description = st.text_input("Description")
-        amount = st.number_input("Amount", format="%.2f")
-        type = st.selectbox("Type", ["Income", "Expense"])
-        date = st.date_input("Date")
-        submitted = st.form_submit_button("Add Record")
-        if submitted:
-            cursor.execute('INSERT INTO finance (description, amount, type, date) VALUES (?, ?, ?, ?)', (description, amount, type, date))
-            conn.commit()
-            st.success("Finance record added successfully!")
-
-    st.subheader("Update or Delete Finance Record")
-    record_id = st.number_input("Record ID", min_value=1, step=1)
-    new_amount = st.number_input("New Amount", format="%.2f")
-    update_btn = st.button("Update Finance Record")
-    delete_btn = st.button("Delete Finance Record")
-
-    if update_btn:
-        cursor.execute('UPDATE finance SET amount = ? WHERE id = ?', (new_amount, record_id))
-        conn.commit()
-        st.success("Finance record updated successfully!")
-
-    if delete_btn:
-        cursor.execute('DELETE FROM finance WHERE id = ?', (record_id,))
-        conn.commit()
-        st.success("Finance record deleted successfully!")
-
-    cursor.execute('SELECT * FROM finance')
-    records = cursor.fetchall()
-    st.table(records)
-    conn.close()
-
-def show_sales():
-    st.header("Sales Management")
-    conn = sqlite3.connect('dashboard.db')
-    cursor = conn.cursor()
-
-    uploaded_file = st.file_uploader("Upload Sales CSV", type="csv")
-    if uploaded_file:
-        upload_csv_to_table(uploaded_file, 'sales')
-        st.success("Sales data uploaded successfully!")
-
-    with st.form("add_sale"):
-        customer_name = st.text_input("Customer Name")
-        item_id = st.number_input("Item ID", min_value=1)
-        quantity = st.number_input("Quantity", min_value=1)
-        date = st.date_input("Date")
-        submitted = st.form_submit_button("Add Sale")
-        if submitted:
-            cursor.execute('SELECT price FROM stock WHERE id = ?', (item_id,))
-            price = cursor.fetchone()
-            if price:
-                total_price = price[0] * quantity
-                cursor.execute('INSERT INTO sales (customer_name, item_id, quantity, total_price, date) VALUES (?, ?, ?, ?, ?)', (customer_name, item_id, quantity, total_price, date))
-                cursor.execute('UPDATE stock SET quantity = quantity - ? WHERE id = ?', (quantity, item_id))
-                conn.commit()
-                st.success("Sale recorded successfully!")
-            else:
-                st.error("Item not found")
-
-    st.subheader("Update or Delete Sale Record")
-    sale_id = st.number_input("Sale ID", min_value=1, step=1)
-    new_quantity = st.number_input("New Quantity for Sale", min_value=0, step=1)
-    update_btn = st.button("Update Sale Record")
-    delete_btn = st.button("Delete Sale Record")
-
-    if update_btn:
-        cursor.execute('SELECT item_id, quantity FROM sales WHERE id = ?', (sale_id,))
-        sale_record = cursor.fetchone()
-        if sale_record:
-            item_id, old_quantity = sale_record
-            cursor.execute('UPDATE sales SET quantity = ?, total_price = ? * quantity WHERE id = ?', (new_quantity, old_quantity, sale_id))
-            cursor.execute('UPDATE stock SET quantity = quantity + ? - ? WHERE id = ?', (old_quantity, new_quantity, item_id))
-            conn.commit()
-            st.success("Sale record updated successfully!")
-        else:
-            st.error("Sale record not found")
-
-    if delete_btn:
-        cursor.execute('SELECT item_id, quantity FROM sales WHERE id = ?', (sale_id,))
-        sale_record = cursor.fetchone()
-        if sale_record:
-            item_id, quantity = sale_record
-            cursor.execute('DELETE FROM sales WHERE id = ?', (sale_id,))
-            cursor.execute('UPDATE stock SET quantity = quantity + ? WHERE id = ?', (quantity, item_id))
-            conn.commit()
-            st.success("Sale record deleted successfully!")
-        else:
-            st.error("Sale record not found")
-
-    cursor.execute('SELECT * FROM sales')
-    records = cursor.fetchall()
-    st.table(records)
-    conn.close()
-
-def main():
-    st.title("Business Dashboard")
-    init_db()
-
-    menu = ["Dashboard", "Stock", "Finance", "Sales"]
-    choice = st.sidebar.selectbox("Menu", menu)
-
-    if choice == "Dashboard":
-        show_dashboard()
-    elif choice == "Stock":
-        show_stock()
-    elif choice == "Finance":
-        show_finance()
-    elif choice == "Sales":
-        show_sales()
-
-if __name__ == '__main__':
-    main()
+if st.button('Update HR'):
+    if jumlah_karyawan > 0:
+        hr_data.loc[hr_data['Posisi'] == posisi, 'Jumlah Karyawan'] = int(jumlah_karyawan)
+        st.success(f'Jumlah Karyawan untuk posisi {posisi} berhasil diperbarui!')
+    st.plotly_chart(create_hr_fig())
