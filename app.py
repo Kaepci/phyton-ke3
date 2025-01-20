@@ -12,6 +12,10 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS stock (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT,
+                        brand TEXT,
+                        type TEXT,
+                        color TEXT,
+                        size TEXT,
                         quantity INTEGER,
                         price REAL
                     )''')
@@ -105,11 +109,16 @@ def show_stock():
 
     with st.form("add_stock"):
         name = st.text_input("Item Name")
+        brand = st.text_input("Brand")
+        type = st.text_input("Type")
+        color = st.text_input("Color")
+        size = st.text_input("Size")
         quantity = st.number_input("Quantity", min_value=0)
         price = st.number_input("Price", min_value=0.0, format="%.2f")
         submitted = st.form_submit_button("Add Stock")
         if submitted:
-            cursor.execute('INSERT INTO stock (name, quantity, price) VALUES (?, ?, ?)', (name, quantity, price))
+            cursor.execute('INSERT INTO stock (name, brand, type, color, size, quantity, price) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                           (name, brand, type, color, size, quantity, price))
             conn.commit()
             st.success("Stock added successfully!")
 
