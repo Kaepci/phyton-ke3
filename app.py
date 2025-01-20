@@ -58,10 +58,19 @@ def show_dashboard():
         st.write(f"**Total Expense:** ${expense:.2f}")
         st.write(f"**Net Profit:** ${net_profit:.2f}")
 
-        fig, ax = plt.subplots()
-        ax.pie([income, expense], labels=['Income', 'Expense'], autopct='%1.1f%%', startangle=90, colors=['green', 'red'])
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        st.pyplot(fig)
+        if income > 0 or expense > 0:
+            fig, ax = plt.subplots()
+            ax.pie(
+                [max(income, 0), max(expense, 0)],
+                labels=['Income', 'Expense'],
+                autopct='%1.1f%%',
+                startangle=90,
+                colors=['green', 'red']
+            )
+            ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+            st.pyplot(fig)
+        else:
+            st.write("No sufficient data for the pie chart.")
     else:
         st.write("No finance data available.")
 
